@@ -9,3 +9,4 @@ node_modules/
 build/
 dist/
 .DS_Store
+backend/ngrok.exe 
