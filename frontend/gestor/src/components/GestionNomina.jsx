@@ -2,9 +2,8 @@ import React, { useState } from 'react';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-// --- IMPORTAMOS LOS ICONOS PROFESIONALES ---
-import { FaFileExcel, FaFilePdf } from "react-icons/fa"; // Para los archivos
-import { BiEdit } from "react-icons/bi"; // Para el botón de editar
+import { FaFileExcel, FaFilePdf } from "react-icons/fa"; 
+import { BiEdit } from "react-icons/bi";
 
 const GestionNomina = () => {
   const [empleados, setEmpleados] = useState([
@@ -77,7 +76,7 @@ const GestionNomina = () => {
           <p style={{ margin: 0, color: '#6c757d' }}>Ajusta el pago quincenal antes de exportar los reportes para Contabilidad.</p>
         </div>
         
-        {/* --- BOTONES CON NUEVOS ICONOS --- */}
+        {/* --- PRUEBA DE COMENTARIO JJIJIJI --- */}
         <div style={{ display: 'flex', gap: '10px' }}>
           <button 
             onClick={exportarExcel} 
@@ -126,7 +125,6 @@ const GestionNomina = () => {
                   <td style={{ padding: '10px' }}>${empleado.salario}</td>
                   <td style={{ padding: '10px', fontWeight: 'bold', color: '#0056b3' }}>${empleado.quincena}</td>
                   <td style={{ padding: '10px' }}>
-                    {/* --- BOTÓN DE EDITAR CON ICONO VECTORIAL --- */}
                     <button 
                       onClick={() => iniciarEdicion(empleado)} 
                       style={{ display: 'flex', alignItems: 'center', gap: '5px', backgroundColor: '#ffc107', color: 'black', border: 'none', padding: '5px 10px', cursor: 'pointer', borderRadius: '3px' }}

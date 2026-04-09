@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-// --- IMPORTACIONES CORREGIDAS ---
 import { BiSearch, BiPlus } from "react-icons/bi"; 
 import { HiOutlineChatBubbleBottomCenterText } from "react-icons/hi2"; 
 
@@ -116,7 +115,6 @@ const TablaGeneral = () => {
 
         <div style={{ flex: '1 1 150px', display: 'flex', justifyContent: 'flex-end' }}>
           <button onClick={agregarEmpleado} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 15px', backgroundColor: '#0d6efd', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>
-            {/* --- AQUÍ ESTABA EL ERROR, YA ESTÁ CORREGIDO --- */}
             <BiPlus fontSize={'18px'} />
             Agregar Empleado
           </button>
