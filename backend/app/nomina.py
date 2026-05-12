@@ -11,7 +11,8 @@ def get_db():
         port=int(os.getenv('DB_PORT')),
         user=os.getenv('DB_USER'),
         password=os.getenv('DB_PASSWORD'),
-        database=os.getenv('DB_NAME')
+        database=os.getenv('DB_NAME'),
+        ssl_disabled=False
     )
 
 def calcular_resumen_dia(fecha=None):
@@ -154,11 +155,11 @@ def calcular_resumen_dia(fecha=None):
                 ))
 
         conn.commit()
-        print(f"✅ Resumen del {fecha} calculado correctamente.")
+        print(f"Resumen del {fecha} calculado correctamente.")
 
     except Exception as e:
         conn.rollback()
-        print(f"❌ Error calculando resumen: {e}")
+        print(f"Error calculando resumen: {e}")
 
     finally:
         cursor.close()
