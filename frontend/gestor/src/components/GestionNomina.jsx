@@ -180,4 +180,4 @@ const GestionNomina = () => {
   );
 };
 
-export default GestionNomina; #aa
+export default GestionNomina;

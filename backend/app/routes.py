@@ -237,4 +237,4 @@ def actualizar_salario():
         return jsonify({"message": "Salario actualizado correctamente en la base de datos"}), 200
     except Exception as e:
         logger.error(f"Error al actualizar salario: {e}")
-        return jsonify({"error": str(e)}),  #aa
+        return jsonify({"error": str(e)}), 
