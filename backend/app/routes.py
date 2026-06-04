@@ -238,3 +238,69 @@ def actualizar_salario():
     except Exception as e:
         logger.error(f"Error al actualizar salario: {e}")
         return jsonify({"error": str(e)}), 500
+
+# ── ESTADÍSTICAS DEL DASHBOARD (CORREGIDO Y MAPEADO CON NOMBRE REAL) ──
+
+@main.route('/api/dashboard_stats', methods=['GET'])
+def get_dashboard_stats():
+    try:
+        conn = get_db()
+        cursor = conn.cursor(dictionary=True)
+        
+        # 1. METRICA: Asistencia Mensual (Contar estatus de abril 2026)
+        query_asistencia = """
+            SELECT id_status_dia, COUNT(*) as total 
+            FROM resumen 
+            WHERE fecha BETWEEN '2026-04-01' AND '2026-04-30'
+            GROUP BY id_status_dia
+        """
+        cursor.execute(query_asistencia)
+        res_asistencia = cursor.fetchall()
+        
+        # 2. METRICA: Empleados por Tienda (Distribución uniendo la tabla tienda para obtener el nombre)
+        query_tiendas = """
+            SELECT t.nombre as tienda, COUNT(*) as cantidad 
+            FROM empleado e
+            LEFT JOIN tienda t ON e.id_tienda = t.id_tienda
+            WHERE e.id_status = 1 
+            GROUP BY e.id_tienda, t.nombre
+        """
+        cursor.execute(query_tiendas)
+        res_tiendas = cursor.fetchall()
+        
+        # 3. METRICA: Horas Trabajadas Promedio por Empleado (Abril)
+        query_horas = """
+            SELECT e.nombre, ROUND(AVG(r.horas_trabajadas), 1) as promedio_horas
+            FROM resumen r
+            JOIN empleado e ON r.id_empleado = e.id_empleado
+            WHERE r.fecha BETWEEN '2026-04-01' AND '2026-04-30' AND r.horas_trabajadas > 0
+            GROUP BY e.id_empleado, e.nombre
+        """
+        cursor.execute(query_horas)
+        res_horas = cursor.fetchall()
+
+        # 4. METRICA: Puntualidad (Corregido 'a_tiempo' para evitar error de SQL)
+        query_puntualidad = """
+            SELECT 
+                SUM(CASE WHEN id_status_dia = 1 THEN 1 ELSE 0 END) as a_tiempo,
+                SUM(CASE WHEN id_status_dia = 3 THEN 1 ELSE 0 END) as incidencias
+            FROM resumen
+            WHERE fecha BETWEEN '2026-04-01' AND '2026-04-30'
+        """
+        cursor.execute(query_puntualidad)
+        res_puntualidad = cursor.fetchone()
+
+        cursor.close()
+        conn.close()
+
+        # Retornamos todo consolidado en un solo objeto JSON empaquetado
+        return jsonify({
+            "asistencia_mensual": res_asistencia,
+            "empleados_tienda": res_tiendas,
+            "horas_trabajadas": res_horas,
+            "puntualidad": res_puntualidad
+        }), 200
+
+    except Exception as e:
+        logger.error(f"Error al generar métricas del dashboard: {e}")
+        return jsonify({"error": str(e)}), 500
