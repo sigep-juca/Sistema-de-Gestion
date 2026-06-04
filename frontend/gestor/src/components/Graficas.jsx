@@ -122,11 +122,22 @@ const Graficas = () => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  
+  // Nuevo estado para el mes seleccionado (vacío = mes actual por defecto en el backend)
+  const [mesSeleccionado, setMesSeleccionado] = useState('');
 
+  // El useEffect ahora se dispara cada vez que "mesSeleccionado" cambia
   useEffect(() => {
     const fetchStats = async () => {
+      setLoading(true); // Mostramos el spinner al cambiar de mes
+      setError(false);
       try {
-        const response = await fetch('http://localhost:5000/api/dashboard_stats');
+        // Construimos la URL dinámicamente dependiendo del filtro
+        const url = mesSeleccionado 
+          ? `http://localhost:5000/api/dashboard_stats?mes=${mesSeleccionado}` 
+          : 'http://localhost:5000/api/dashboard_stats';
+          
+        const response = await fetch(url);
         if (response.ok) {
           const json = await response.json();
           setData(json);
@@ -141,7 +152,7 @@ const Graficas = () => {
       }
     };
     fetchStats();
-  }, []);
+  }, [mesSeleccionado]);
 
   if (loading) return <Spinner />;
 
@@ -188,13 +199,14 @@ const Graficas = () => {
         .slice(0, 10)
     : null;
 
-  // 4. Puntualidad — parseamos explícitamente a números usando Number() para romper el bug
+  // 4. Puntualidad
   const aTiempo = Number(data.puntualidad?.a_tiempo || 0);
   const incidencias = Number(data.puntualidad?.incidencias || 0);
   const totalPuntualidad = aTiempo + incidencias;
+  
   const pctPuntualidad = totalPuntualidad > 0
     ? Math.round((aTiempo / totalPuntualidad) * 100) : 0;
-  
+    
   const dataPuntualidad = totalPuntualidad > 0
     ? [
         { name: 'A Tiempo', value: aTiempo },
@@ -209,14 +221,46 @@ const Graficas = () => {
       minHeight: '100vh', fontFamily: "'Segoe UI', system-ui, sans-serif"
     }}>
 
-      {/* ENCABEZADO */}
-      <div style={{ marginBottom: '28px' }}>
-        <h1 style={{ fontSize: '26px', fontWeight: '800', color: '#0f172a', margin: '0 0 6px 0' }}>
-          Gráficas y Estadísticas
-        </h1>
-        <p style={{ color: '#64748b', margin: 0, fontSize: '14px' }}>
-          Monitoreo e indicadores clave del personal de JUCA TECNO.
-        </p>
+      {/* ENCABEZADO CON EL SELECTOR DE MES */}
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'flex-start', 
+        marginBottom: '28px' 
+      }}>
+        <div>
+          <h1 style={{ fontSize: '26px', fontWeight: '800', color: '#0f172a', margin: '0 0 6px 0' }}>
+            Gráficas y Estadísticas
+          </h1>
+          <p style={{ color: '#64748b', margin: 0, fontSize: '14px' }}>
+            Monitoreo e indicadores clave del personal de JUCA TECNO.
+          </p>
+        </div>
+        
+        {/* SELECTOR DE MES */}
+        <div>
+          <select 
+            value={mesSeleccionado} 
+            onChange={(e) => setMesSeleccionado(e.target.value)}
+            style={{
+              padding: '10px 16px',
+              borderRadius: '8px',
+              border: '1px solid #cbd5e1',
+              backgroundColor: '#ffffff',
+              fontSize: '14px',
+              fontWeight: '600',
+              color: '#334155',
+              cursor: 'pointer',
+              outline: 'none',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+            }}
+          >
+            <option value="">Mes Actual (En curso)</option>
+            <option value="2026-06">Junio 2026</option>
+            <option value="2026-05">Mayo 2026</option>
+            <option value="2026-04">Abril 2026</option>
+          </select>
+        </div>
       </div>
 
       {/* GRID 2×2 */}
@@ -231,7 +275,7 @@ const Graficas = () => {
           icon={<BiBarChartAlt2 />}
           iconColor="#0056b3"
           title="Asistencia Mensual"
-          subtitle="Asistencias, faltas y retardos del período activo."
+          subtitle="Asistencias, faltas y retardos del período."
         >
           {!dataAsistencia ? <EmptyState mensaje="Sin registros de asistencia este período." /> : (
             <ResponsiveContainer width="100%" height={260}>
