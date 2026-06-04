@@ -9,7 +9,7 @@ const Login = ({ onLoginExitoso }) => {
   const manejarEnvio = (e) => {
     e.preventDefault(); 
 
-    // Validación de prueba (El backend lo hará en el futuro)
+    // Validación de prueba (El backend BRIANNNN  lo hará en el futuro)
     if (usuario === 'admin' && password === '12345') {
       setError('');
       onLoginExitoso(); 

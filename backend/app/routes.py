@@ -237,4 +237,82 @@ def actualizar_salario():
         return jsonify({"message": "Salario actualizado correctamente en la base de datos"}), 200
     except Exception as e:
         logger.error(f"Error al actualizar salario: {e}")
-        return jsonify({"error": str(e)}), 
+        return jsonify({"error": str(e)}), 500
+
+# ── ESTADÍSTICAS DEL DASHBOARD CON SOPORTE PARA FILTRO POR MES ──
+
+@main.route('/api/dashboard_stats', methods=['GET'])
+def get_dashboard_stats():
+    try:
+        conn = get_db()
+        cursor = conn.cursor(dictionary=True)
+        
+        # Atrapamos el parámetro 'mes' desde React (ej. '2026-05')
+        mes_param = request.args.get('mes')
+        
+        # Condicional dinámico para las fechas
+        if mes_param:
+            filtro_fecha = f"DATE_FORMAT(fecha, '%Y-%m') = '{mes_param}'"
+            filtro_fecha_r = f"DATE_FORMAT(r.fecha, '%Y-%m') = '{mes_param}'"
+        else:
+            filtro_fecha = "MONTH(fecha) = MONTH(CURDATE()) AND YEAR(fecha) = YEAR(CURDATE())"
+            filtro_fecha_r = "MONTH(r.fecha) = MONTH(CURDATE()) AND YEAR(r.fecha) = YEAR(CURDATE())"
+
+        # 1. METRICA: Asistencia Mensual
+        query_asistencia = f"""
+            SELECT id_status_dia, COUNT(*) as total 
+            FROM resumen 
+            WHERE {filtro_fecha}
+            GROUP BY id_status_dia
+        """
+        cursor.execute(query_asistencia)
+        res_asistencia = cursor.fetchall()
+        
+        # 2. METRICA: Empleados por Tienda 
+        # (Sin filtro de fecha porque refleja la distribución actual del personal activo)
+        query_tiendas = """
+            SELECT t.nombre as tienda, COUNT(*) as cantidad 
+            FROM empleado e
+            LEFT JOIN tienda t ON e.id_tienda = t.id_tienda
+            WHERE e.id_status = 1 
+            GROUP BY e.id_tienda, t.nombre
+        """
+        cursor.execute(query_tiendas)
+        res_tiendas = cursor.fetchall()
+        
+        # 3. METRICA: Horas Trabajadas Promedio por Empleado
+        query_horas = f"""
+            SELECT e.nombre, ROUND(AVG(r.horas_trabajadas), 1) as promedio_horas
+            FROM resumen r
+            JOIN empleado e ON r.id_empleado = e.id_empleado
+            WHERE {filtro_fecha_r} AND r.horas_trabajadas > 0
+            GROUP BY e.id_empleado, e.nombre
+        """
+        cursor.execute(query_horas)
+        res_horas = cursor.fetchall()
+
+        # 4. METRICA: Puntualidad
+        query_puntualidad = f"""
+            SELECT 
+                SUM(CASE WHEN id_status_dia = 1 THEN 1 ELSE 0 END) as a_tiempo,
+                SUM(CASE WHEN id_status_dia = 3 THEN 1 ELSE 0 END) as incidencias
+            FROM resumen
+            WHERE {filtro_fecha}
+        """
+        cursor.execute(query_puntualidad)
+        res_puntualidad = cursor.fetchone()
+
+        cursor.close()
+        conn.close()
+
+        # Retornamos todo consolidado
+        return jsonify({
+            "asistencia_mensual": res_asistencia,
+            "empleados_tienda": res_tiendas,
+            "horas_trabajadas": res_horas,
+            "puntualidad": res_puntualidad
+        }), 200
+
+    except Exception as e:
+        logger.error(f"Error al generar métricas del dashboard: {e}")
+        return jsonify({"error": str(e)}), 500

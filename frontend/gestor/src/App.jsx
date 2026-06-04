@@ -6,6 +6,7 @@ import ControlAsistencia from './components/ControlAsistencia.jsx';
 import Login from './components/Login.jsx';
 import logoEmpresa from './assets/JUCA.png'; 
 import { HiExclamationTriangle } from "react-icons/hi2";
+import Graficas from './components/Graficas.jsx';
 
 function App() {
   const location = useLocation();
@@ -70,14 +71,15 @@ function App() {
           <Link to="/" style={estiloBoton('/')}>1. Directorio General</Link>
           <Link to="/nomina" style={estiloBoton('/nomina')}>2. Nómina Quincenal</Link>
           <Link to="/asistencia" style={estiloBoton('/asistencia')}>3. Control de Asistencia y Horarios</Link>
+          <Link to="/graficas" style={estiloBoton('/graficas')}>4. Gráficas</Link>
         </nav>
 
         <main style={{ border: '1px solid #ddd', padding: '25px', borderRadius: '8px', backgroundColor: 'white', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
           <Routes>
             <Route path="/" element={<TablaGeneral />} />
             <Route path="/nomina" element={<GestionNomina />} />
-            {/* Aquí conectamos la Pestaña 3 */}
             <Route path="/asistencia" element={<ControlAsistencia />} />
+            <Route path="/graficas" element={<Graficas />} />
           </Routes>
         </main>
       </div>
