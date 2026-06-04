@@ -239,7 +239,7 @@ def actualizar_salario():
         logger.error(f"Error al actualizar salario: {e}")
         return jsonify({"error": str(e)}), 500
 
-# ── ESTADÍSTICAS DEL DASHBOARD (CORREGIDO Y MAPEADO CON NOMBRE REAL) ──
+# ── ESTADÍSTICAS DEL DASHBOARD CON SOPORTE PARA FILTRO POR MES ──
 
 @main.route('/api/dashboard_stats', methods=['GET'])
 def get_dashboard_stats():
@@ -247,17 +247,29 @@ def get_dashboard_stats():
         conn = get_db()
         cursor = conn.cursor(dictionary=True)
         
-        # 1. METRICA: Asistencia Mensual (Contar estatus de abril 2026)
-        query_asistencia = """
+        # Atrapamos el parámetro 'mes' desde React (ej. '2026-05')
+        mes_param = request.args.get('mes')
+        
+        # Condicional dinámico para las fechas
+        if mes_param:
+            filtro_fecha = f"DATE_FORMAT(fecha, '%Y-%m') = '{mes_param}'"
+            filtro_fecha_r = f"DATE_FORMAT(r.fecha, '%Y-%m') = '{mes_param}'"
+        else:
+            filtro_fecha = "MONTH(fecha) = MONTH(CURDATE()) AND YEAR(fecha) = YEAR(CURDATE())"
+            filtro_fecha_r = "MONTH(r.fecha) = MONTH(CURDATE()) AND YEAR(r.fecha) = YEAR(CURDATE())"
+
+        # 1. METRICA: Asistencia Mensual
+        query_asistencia = f"""
             SELECT id_status_dia, COUNT(*) as total 
             FROM resumen 
-            WHERE fecha BETWEEN '2026-04-01' AND '2026-04-30'
+            WHERE {filtro_fecha}
             GROUP BY id_status_dia
         """
         cursor.execute(query_asistencia)
         res_asistencia = cursor.fetchall()
         
-        # 2. METRICA: Empleados por Tienda (Distribución uniendo la tabla tienda para obtener el nombre)
+        # 2. METRICA: Empleados por Tienda 
+        # (Sin filtro de fecha porque refleja la distribución actual del personal activo)
         query_tiendas = """
             SELECT t.nombre as tienda, COUNT(*) as cantidad 
             FROM empleado e
@@ -268,24 +280,24 @@ def get_dashboard_stats():
         cursor.execute(query_tiendas)
         res_tiendas = cursor.fetchall()
         
-        # 3. METRICA: Horas Trabajadas Promedio por Empleado (Abril)
-        query_horas = """
+        # 3. METRICA: Horas Trabajadas Promedio por Empleado
+        query_horas = f"""
             SELECT e.nombre, ROUND(AVG(r.horas_trabajadas), 1) as promedio_horas
             FROM resumen r
             JOIN empleado e ON r.id_empleado = e.id_empleado
-            WHERE r.fecha BETWEEN '2026-04-01' AND '2026-04-30' AND r.horas_trabajadas > 0
+            WHERE {filtro_fecha_r} AND r.horas_trabajadas > 0
             GROUP BY e.id_empleado, e.nombre
         """
         cursor.execute(query_horas)
         res_horas = cursor.fetchall()
 
-        # 4. METRICA: Puntualidad (Corregido 'a_tiempo' para evitar error de SQL)
-        query_puntualidad = """
+        # 4. METRICA: Puntualidad
+        query_puntualidad = f"""
             SELECT 
                 SUM(CASE WHEN id_status_dia = 1 THEN 1 ELSE 0 END) as a_tiempo,
                 SUM(CASE WHEN id_status_dia = 3 THEN 1 ELSE 0 END) as incidencias
             FROM resumen
-            WHERE fecha BETWEEN '2026-04-01' AND '2026-04-30'
+            WHERE {filtro_fecha}
         """
         cursor.execute(query_puntualidad)
         res_puntualidad = cursor.fetchone()
@@ -293,7 +305,7 @@ def get_dashboard_stats():
         cursor.close()
         conn.close()
 
-        # Retornamos todo consolidado en un solo objeto JSON empaquetado
+        # Retornamos todo consolidado
         return jsonify({
             "asistencia_mensual": res_asistencia,
             "empleados_tienda": res_tiendas,
