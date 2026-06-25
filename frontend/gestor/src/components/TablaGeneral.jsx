@@ -242,7 +242,7 @@ const TablaGeneral = () => {
                       <td style={{ padding: '10px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{obtenerNombreSupervisor(empleado.supervisor)}</td>
                       <td style={{ padding: '10px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{empleado.nombreTienda || '-'}</td>
                       <td style={{ padding: '10px' }}>{empleado.fechaInicio}</td>
-                      <td style={{ padding: '10px', color: '#666' }}>{empleado.status === 'inactivo' ? empleado.fechaSalida : '-'}</td>
+                      <td style={{ padding: '10px', color: '#666' }}>{empleado.status !== 'activo' ? empleado.fechaSalida : '-'}</td>
                       <td style={{ padding: '10px' }}><span style={{ fontWeight: 'bold', color: empleado.status === 'activo' ? 'green' : 'red' }}>{empleado.status.toUpperCase()}</span></td>
                       <td style={{ padding: '10px', display: 'flex', gap: '5px', alignItems: 'center' }}>
                         <button onClick={() => iniciarEdicion(empleado)} style={{ padding: '4px 8px', cursor: 'pointer', backgroundColor: '#ffc107', color: 'black', border: 'none', borderRadius: '3px', fontSize: '12px', flex: 1 }}>Editar</button>
