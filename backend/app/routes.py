@@ -2,6 +2,8 @@ from flask import Blueprint, jsonify, request, current_app, Response
 import mysql.connector
 import html
 import logging
+from datetime import datetime
+import calendar
 from twilio.twiml.messaging_response import MessagingResponse
 
 logging.basicConfig(level=logging.INFO)
@@ -27,11 +29,10 @@ def get_empleados():
     conn = get_db()
     cursor = conn.cursor(dictionary=True)
  
-    # Usamos LEFT JOIN para traer los datos descriptivos de cada empleado
     cursor.execute("""
         SELECT e.id_empleado, e.nombre, p.descripcion AS puesto,
                e.id_tienda, t.nombre AS tienda, s.descripcion AS status,
-               e.id_supervisor, e.telefono, e.fecha_inicio
+               e.id_supervisor, e.telefono, e.fecha_inicio, e.fecha_fin
         FROM empleado e
         LEFT JOIN puesto p ON e.id_puesto = p.id_puesto
         LEFT JOIN tienda t ON e.id_tienda = t.id_tienda
@@ -43,7 +44,7 @@ def get_empleados():
     conn.close()
     return jsonify(empleados)
 
-# ── NÓMINA (NUEVA RUTA CON DATOS REALES DE BANCARIO) ─────────
+# ── NÓMINA (CÁLCULO EXACTO + PROPORCIÓN SÉPTIMO DÍA + TOPE SALARIAL) ──
 
 @main.route('/nomina_real', methods=['GET'])
 def get_nomina_real():
@@ -51,25 +52,95 @@ def get_nomina_real():
         conn = get_db()
         cursor = conn.cursor(dictionary=True)
         
-        # Esta consulta une al empleado con su sueldo real en la tabla bancario
+        mes = request.args.get('mes') 
+        quincena = request.args.get('quincena') 
+        
+        if not mes or not quincena:
+            hoy = datetime.today()
+            mes = hoy.strftime('%Y-%m')
+            quincena = '1' if hoy.day <= 15 else '2'
+
+        year, month = map(int, mes.split('-'))
+        if quincena == '1':
+            fecha_inicio = f"{mes}-01"
+            fecha_fin = f"{mes}-15"
+        else:
+            ultimo_dia = calendar.monthrange(year, month)[1]
+            fecha_inicio = f"{mes}-16"
+            fecha_fin = f"{mes}-{ultimo_dia}"
+        
         query = """
             SELECT 
                 e.id_empleado as id, 
                 e.nombre, 
-                b.salario as salario_fijo
+                b.banco,
+                b.clabe,
+                b.num_tarjeta,
+                b.num_cuenta,
+                b.salario as salario_fijo,
+                COALESCE(SUM(r.horas_trabajadas), 0) as total_horas,
+                COUNT(DISTINCT r.fecha) as dias_trabajados
             FROM empleado e
             JOIN bancario b ON e.id_empleado = b.id_empleado
+            LEFT JOIN resumen r ON e.id_empleado = r.id_empleado 
+                AND r.fecha BETWEEN %s AND %s
             WHERE e.id_status = 1
+            GROUP BY e.id_empleado, e.nombre, b.banco, b.clabe, b.num_tarjeta, b.num_cuenta, b.salario
         """
         
-        cursor.execute(query)
+        cursor.execute(query, (fecha_inicio, fecha_fin))
         nomina = cursor.fetchall()
         
-        # Calculamos el pago quincenal antes de enviar al frontend
         for emp in nomina:
-            # Si el salario es nulo en la BD, lo manejamos como 0 para evitar errores
-            salario = emp['salario_fijo'] if emp['salario_fijo'] is not None else 0
-            emp['pago_quincenal'] = salario / 2
+            salario_base = float(emp['salario_fijo']) if emp['salario_fijo'] is not None else 0.0
+            
+            # REGLA 1: PAGO POR DÍA (<= 1500)
+            if salario_base > 0 and salario_base <= 1500:
+                dias_trabajados = int(emp['dias_trabajados'])
+                
+                dias_descanso = dias_trabajados / 6.0
+                dias_a_pagar = dias_trabajados + dias_descanso
+                
+                pago_quincenal_teorico = salario_base * 15 
+                pago_calculado = dias_a_pagar * salario_base
+                
+                # TOPE: No pagar más de la quincena contratada
+                if pago_calculado > pago_quincenal_teorico:
+                    pago_calculado = pago_quincenal_teorico
+                
+                if dias_trabajados > 0:
+                    emp['tiempo_registrado'] = f"{dias_trabajados}d (+{round(dias_descanso, 1)}d desc)"
+                else:
+                    emp['tiempo_registrado'] = "0 días"
+                    
+                emp['tarifa_display'] = f"${salario_base}/Día"
+                emp['pago_quincenal_teorico'] = pago_quincenal_teorico
+                emp['pago_quincenal'] = round(pago_calculado, 2)
+                
+            # REGLA 2: PAGO POR HORA (> 1500)
+            else:
+                salario_diario = salario_base / 30.0
+                tarifa_hora = salario_diario / 8.0
+                total_horas = float(emp['total_horas'])
+                
+                horas_descanso = total_horas / 6.0
+                horas_a_pagar = total_horas + horas_descanso
+                
+                pago_quincenal_teorico = round(salario_base / 2.0, 2)
+                pago_calculado = horas_a_pagar * tarifa_hora
+                
+                # TOPE: No pagar más de la quincena contratada
+                if pago_calculado > pago_quincenal_teorico:
+                    pago_calculado = pago_quincenal_teorico
+                
+                if total_horas > 0:
+                    emp['tiempo_registrado'] = f"{round(total_horas, 1)}h (+{round(horas_descanso, 1)}h desc)"
+                else:
+                    emp['tiempo_registrado'] = "0 hrs"
+                    
+                emp['tarifa_display'] = f"${round(tarifa_hora, 2)}/Hr"
+                emp['pago_quincenal_teorico'] = pago_quincenal_teorico
+                emp['pago_quincenal'] = round(pago_calculado, 2)
             
         cursor.close()
         conn.close()
@@ -134,7 +205,7 @@ def webhook():
         except Exception as e:
             logger.error(f"[WEBHOOK] Error procesando mensaje: {e}")
             respuesta = "Error al procesar tu solicitud."
-        
+            
         twiml_response = MessagingResponse()
         twiml_response.message(str(respuesta))
         return Response(str(twiml_response), mimetype='application/xml')
@@ -213,52 +284,68 @@ def eliminar_empleado(id):
 def ping():
     return jsonify({'status': 'ok', 'mensaje': 'Backend funcionando'})
 
+# ── ACTUALIZAR SALARIO Y DATOS BANCARIOS ───────────────────
+
 @main.route('/actualizar_salario', methods=['POST'])
 def actualizar_salario():
     try:
         data = request.json
         id_empleado = data.get('id')
         pago_quincenal = float(data.get('pago_quincenal'))
+        banco = data.get('banco')
+        cuenta = data.get('cuenta')
         
-        # El sueldo en la base de datos es mensual, así que multiplicamos por 2
         salario_mensual = pago_quincenal * 2
+        
+        clabe = None
+        num_tarjeta = None
+        num_cuenta = None
+        
+        if cuenta:
+            cuenta = str(cuenta).strip()
+            if len(cuenta) == 18:
+                clabe = cuenta
+            elif len(cuenta) == 16:
+                num_tarjeta = cuenta
+            else:
+                num_cuenta = cuenta
         
         conn = get_db()
         cursor = conn.cursor()
         
-        # Actualizamos directamente la columna 'salario' en la tabla 'bancario'
-        query = "UPDATE bancario SET salario = %s WHERE id_empleado = %s"
-        cursor.execute(query, (salario_mensual, id_empleado))
+        query = """
+            UPDATE bancario 
+            SET salario = %s, banco = %s, clabe = %s, num_tarjeta = %s, num_cuenta = %s 
+            WHERE id_empleado = %s
+        """
+        cursor.execute(query, (salario_mensual, banco, clabe, num_tarjeta, num_cuenta, id_empleado))
         
         conn.commit()
         cursor.close()
         conn.close()
         
-        return jsonify({"message": "Salario actualizado correctamente en la base de datos"}), 200
+        return jsonify({"message": "Datos actualizados correctamente en la base de datos"}), 200
     except Exception as e:
-        logger.error(f"Error al actualizar salario: {e}")
+        logger.error(f"Error al actualizar datos: {e}")
         return jsonify({"error": str(e)}), 500
 
-# ── ESTADÍSTICAS DEL DASHBOARD CON SOPORTE PARA FILTRO POR MES ──
-
+# ── ESTADÍSTICAS DEL DASHBOARD ──────────────────────────────
 @main.route('/api/dashboard_stats', methods=['GET'])
 def get_dashboard_stats():
     try:
         conn = get_db()
         cursor = conn.cursor(dictionary=True)
-        
-        # Atrapamos el parámetro 'mes' desde React (ej. '2026-05')
+ 
         mes_param = request.args.get('mes')
-        
-        # Condicional dinámico para las fechas
+ 
         if mes_param:
             filtro_fecha = f"DATE_FORMAT(fecha, '%Y-%m') = '{mes_param}'"
             filtro_fecha_r = f"DATE_FORMAT(r.fecha, '%Y-%m') = '{mes_param}'"
         else:
             filtro_fecha = "MONTH(fecha) = MONTH(CURDATE()) AND YEAR(fecha) = YEAR(CURDATE())"
             filtro_fecha_r = "MONTH(r.fecha) = MONTH(CURDATE()) AND YEAR(r.fecha) = YEAR(CURDATE())"
-
-        # 1. METRICA: Asistencia Mensual
+ 
+        # ── Asistencia mensual ──
         query_asistencia = f"""
             SELECT id_status_dia, COUNT(*) as total 
             FROM resumen 
@@ -267,20 +354,22 @@ def get_dashboard_stats():
         """
         cursor.execute(query_asistencia)
         res_asistencia = cursor.fetchall()
-        
-        # 2. METRICA: Empleados por Tienda 
-        # (Sin filtro de fecha porque refleja la distribución actual del personal activo)
+ 
+        # ── Empleados por tienda (excluyendo el comodín "TODAS" = id_tienda 1) ──
         query_tiendas = """
             SELECT t.nombre as tienda, COUNT(*) as cantidad 
             FROM empleado e
             LEFT JOIN tienda t ON e.id_tienda = t.id_tienda
-            WHERE e.id_status = 1 
+            WHERE e.id_status = 1 AND e.id_tienda != 1
             GROUP BY e.id_tienda, t.nombre
+            ORDER BY cantidad DESC
         """
         cursor.execute(query_tiendas)
         res_tiendas = cursor.fetchall()
-        
-        # 3. METRICA: Horas Trabajadas Promedio por Empleado
+ 
+        total_empleados_general = sum(t['cantidad'] for t in res_tiendas)
+ 
+        # ── Horas trabajadas promedio por empleado ──
         query_horas = f"""
             SELECT e.nombre, ROUND(AVG(r.horas_trabajadas), 1) as promedio_horas
             FROM resumen r
@@ -290,8 +379,8 @@ def get_dashboard_stats():
         """
         cursor.execute(query_horas)
         res_horas = cursor.fetchall()
-
-        # 4. METRICA: Puntualidad
+ 
+        # ── Puntualidad colectiva ──
         query_puntualidad = f"""
             SELECT 
                 SUM(CASE WHEN id_status_dia = 1 THEN 1 ELSE 0 END) as a_tiempo,
@@ -301,18 +390,190 @@ def get_dashboard_stats():
         """
         cursor.execute(query_puntualidad)
         res_puntualidad = cursor.fetchone()
+ 
+        cursor.close()
+        conn.close()
+ 
+        # ── Un solo return, al final, con todo ya calculado ──
+        return jsonify({
+            "asistencia_mensual": res_asistencia,
+            "empleados_tienda": res_tiendas,
+            "total_empleados_general": total_empleados_general,
+            "horas_trabajadas": res_horas,
+            "puntualidad": res_puntualidad
+        }), 200
+ 
+    except Exception as e:
+        logger.error(f"Error al generar métricas del dashboard: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@main.route('/api/dashboard_filtros', methods=['GET'])
+def get_dashboard_filtros():
+    try:
+        conn = get_db()
+        cursor = conn.cursor(dictionary=True)
+
+        cursor.execute("""
+            SELECT id_tienda, nombre 
+            FROM tienda 
+            ORDER BY nombre
+        """)
+        tiendas = cursor.fetchall()
+
+        cursor.execute("""
+            SELECT id_empleado, nombre, id_tienda 
+            FROM empleado 
+            WHERE id_status = 1
+            ORDER BY nombre
+        """)
+        empleados = cursor.fetchall()
 
         cursor.close()
         conn.close()
 
-        # Retornamos todo consolidado
         return jsonify({
-            "asistencia_mensual": res_asistencia,
-            "empleados_tienda": res_tiendas,
-            "horas_trabajadas": res_horas,
-            "puntualidad": res_puntualidad
+            "tiendas": tiendas,
+            "empleados": empleados
         }), 200
 
     except Exception as e:
-        logger.error(f"Error al generar métricas del dashboard: {e}")
+        logger.error(f"Error al obtener filtros del dashboard: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+# ── ENDPOINT: ESTADÍSTICAS FILTRADAS POR TIENDA ─────────────────────────
+# Devuelve asistencia/faltas/retardos de la tienda + horas promedio por empleado
+
+@main.route('/api/dashboard_stats_tienda', methods=['GET'])
+def get_dashboard_stats_tienda():
+    try:
+        conn = get_db()
+        cursor = conn.cursor(dictionary=True)
+
+        id_tienda = request.args.get('id_tienda')
+        mes_param = request.args.get('mes')
+
+        if not id_tienda:
+            return jsonify({"error": "Se requiere id_tienda"}), 400
+
+        if mes_param:
+            filtro_fecha_r = "DATE_FORMAT(r.fecha, '%Y-%m') = %s"
+            params_fecha = (mes_param,)
+        else:
+            filtro_fecha_r = "MONTH(r.fecha) = MONTH(CURDATE()) AND YEAR(r.fecha) = YEAR(CURDATE())"
+            params_fecha = ()
+
+        # Nombre de la tienda (para el título de la vista)
+        cursor.execute("SELECT nombre FROM tienda WHERE id_tienda = %s", (id_tienda,))
+        tienda_info = cursor.fetchone()
+        nombre_tienda = tienda_info['nombre'] if tienda_info else f"Tienda {id_tienda}"
+
+        # Asistencia / faltas / retardos de los empleados de esa tienda
+        query_asistencia = f"""
+            SELECT r.id_status_dia, COUNT(*) as total
+            FROM resumen r
+            JOIN empleado e ON r.id_empleado = e.id_empleado
+            WHERE e.id_tienda = %s AND {filtro_fecha_r}
+            GROUP BY r.id_status_dia
+        """
+        cursor.execute(query_asistencia, (id_tienda,) + params_fecha)
+        res_asistencia = cursor.fetchall()
+
+        # Horas promedio por empleado de esa tienda
+        query_horas = f"""
+            SELECT e.nombre, ROUND(AVG(r.horas_trabajadas), 1) as promedio_horas
+            FROM resumen r
+            JOIN empleado e ON r.id_empleado = e.id_empleado
+            WHERE e.id_tienda = %s AND {filtro_fecha_r} AND r.horas_trabajadas > 0
+            GROUP BY e.id_empleado, e.nombre
+            ORDER BY promedio_horas DESC
+        """
+        cursor.execute(query_horas, (id_tienda,) + params_fecha)
+        res_horas = cursor.fetchall()
+
+        # Total de empleados activos en esa tienda
+        cursor.execute(
+            "SELECT COUNT(*) as total FROM empleado WHERE id_tienda = %s AND id_status = 1",
+            (id_tienda,)
+        )
+        total_empleados = cursor.fetchone()['total']
+
+        cursor.close()
+        conn.close()
+
+        return jsonify({
+            "nombre_tienda": nombre_tienda,
+            "total_empleados": total_empleados,
+            "asistencia": res_asistencia,
+            "horas_por_empleado": res_horas
+        }), 200
+
+    except Exception as e:
+        logger.error(f"Error al generar estadísticas de tienda: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+# ── ENDPOINT: ESTADÍSTICAS FILTRADAS POR EMPLEADO ───────────────────────
+# Devuelve línea de tiempo diaria de horas + resumen de asistencia/faltas/retardos
+
+@main.route('/api/dashboard_stats_empleado', methods=['GET'])
+def get_dashboard_stats_empleado():
+    try:
+        conn = get_db()
+        cursor = conn.cursor(dictionary=True)
+
+        id_empleado = request.args.get('id_empleado')
+        mes_param = request.args.get('mes')
+
+        if not id_empleado:
+            return jsonify({"error": "Se requiere id_empleado"}), 400
+
+        if mes_param:
+            filtro_fecha = "DATE_FORMAT(r.fecha, '%Y-%m') = %s"
+            params_fecha = (mes_param,)
+        else:
+            filtro_fecha = "MONTH(r.fecha) = MONTH(CURDATE()) AND YEAR(r.fecha) = YEAR(CURDATE())"
+            params_fecha = ()
+
+        # Nombre del empleado
+        cursor.execute("SELECT nombre FROM empleado WHERE id_empleado = %s", (id_empleado,))
+        emp_info = cursor.fetchone()
+        nombre_empleado = emp_info['nombre'] if emp_info else "Empleado"
+
+        # Línea de tiempo diaria de horas trabajadas
+        query_timeline = f"""
+            SELECT 
+                DATE_FORMAT(r.fecha, '%d/%m') as fecha,
+                r.horas_trabajadas,
+                sd.descripcion as status
+            FROM resumen r
+            LEFT JOIN status_dia sd ON r.id_status_dia = sd.id_status_dia
+            WHERE r.id_empleado = %s AND {filtro_fecha}
+            ORDER BY r.fecha ASC
+        """
+        cursor.execute(query_timeline, (id_empleado,) + params_fecha)
+        res_timeline = cursor.fetchall()
+
+        # Resumen de asistencias / faltas / retardos del empleado
+        query_resumen = f"""
+            SELECT r.id_status_dia, sd.descripcion, COUNT(*) as total
+            FROM resumen r
+            LEFT JOIN status_dia sd ON r.id_status_dia = sd.id_status_dia
+            WHERE r.id_empleado = %s AND {filtro_fecha}
+            GROUP BY r.id_status_dia, sd.descripcion
+        """
+        cursor.execute(query_resumen, (id_empleado,) + params_fecha)
+        res_resumen = cursor.fetchall()
+
+        cursor.close()
+        conn.close()
+
+        return jsonify({
+            "nombre_empleado": nombre_empleado,
+            "timeline_horas": res_timeline,
+            "resumen_status": res_resumen
+        }), 200
+
+    except Exception as e:
+        logger.error(f"Error al generar estadísticas de empleado: {e}")
         return jsonify({"error": str(e)}), 500
