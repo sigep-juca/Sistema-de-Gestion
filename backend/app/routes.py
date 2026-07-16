@@ -216,6 +216,7 @@ def webhook():
         error_response.message("Error del sistema. Intenta de nuevo.")
         return Response(str(error_response), mimetype='application/xml')
 
+
 # ── CRUD DE EMPLEADOS ──────────────────────────────────────
 
 @main.route('/empleados', methods=['POST'])
@@ -226,6 +227,7 @@ def gestionar_empleado():
         conn = get_db()
         cursor = conn.cursor()
         
+        # Buscar el ID del puesto
         cursor.execute("SELECT id_puesto FROM puesto WHERE descripcion = %s", (data['puesto'],))
         res_puesto = cursor.fetchone()
         id_puesto = res_puesto[0] if res_puesto else 1 
@@ -245,7 +247,9 @@ def gestionar_empleado():
                 id_status, data['telefono'], data['ingreso'], 
                 fecha_fin, data.get('id_tienda'), data.get('id_empleado')
             )
+            cursor.execute(query, valores)
         else:
+            # 1. Crear al empleado
             query = """
                 INSERT INTO empleado 
                 (nombre, id_puesto, id_supervisor, id_status, telefono, fecha_inicio, fecha_fin, id_tienda) 
@@ -256,14 +260,24 @@ def gestionar_empleado():
                 id_status, data['telefono'], data['ingreso'], 
                 fecha_fin, data.get('id_tienda')
             )
+            cursor.execute(query, valores)
+            
+            # 2. Obtener el ID del empleado recién creado
+            nuevo_id = cursor.lastrowid
+            
+            # 3. Crear su registro bancario en blanco rellenando los campos obligatorios
+            cursor.execute("""
+                INSERT IGNORE INTO bancario (id_bancario, id_empleado, salario, banco, num_cuenta, num_tarjeta, clabe) 
+                VALUES (%s, %s, 0.0, '', '', '', '')
+            """, (nuevo_id, nuevo_id))
         
-        cursor.execute(query, valores)
         conn.commit()
         cursor.close()
         conn.close()
         
         return jsonify({"message": f"Éxito al {accion}"}), 201
     except Exception as e:
+        logger.error(f"Error en gestionar_empleado: {e}")
         return jsonify({"error": str(e)}), 500
 
 @main.route('/empleados/<int:id>', methods=['DELETE'])
@@ -355,19 +369,22 @@ def get_dashboard_stats():
         cursor.execute(query_asistencia)
         res_asistencia = cursor.fetchall()
  
-        # ── Empleados por tienda (excluyendo el comodín "TODAS" = id_tienda 1) ──
+      # Gráfica de Empleados por Tienda - CONTADOR TOTAL Y REAL
         query_tiendas = """
-            SELECT t.nombre as tienda, COUNT(*) as cantidad 
+            SELECT COALESCE(t.nombre, 'Sin Tienda') as tienda, COUNT(e.id_empleado) as cantidad 
             FROM empleado e
             LEFT JOIN tienda t ON e.id_tienda = t.id_tienda
-            WHERE e.id_status = 1 AND e.id_tienda != 1
+            WHERE e.id_status = 1
             GROUP BY e.id_tienda, t.nombre
             ORDER BY cantidad DESC
         """
         cursor.execute(query_tiendas)
         res_tiendas = cursor.fetchall()
- 
-        total_empleados_general = sum(t['cantidad'] for t in res_tiendas)
+        
+        # Obtener el total real para el KPI
+        cursor.execute("SELECT COUNT(*) as total FROM empleado WHERE id_status = 1")
+        total_data = cursor.fetchone()
+        total_empleados_general = total_data['total']
  
         # ── Horas trabajadas promedio por empleado ──
         query_horas = f"""

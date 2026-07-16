@@ -118,7 +118,12 @@ const TablaGeneral = () => {
 
   const empleadosFiltrados = empleados.filter((emp) => {
     const coincideBusqueda = emp.nombre.toLowerCase().includes(busqueda.toLowerCase()) || emp.puesto.toLowerCase().includes(busqueda.toLowerCase()) || emp.id.toString().includes(busqueda);
-    const coincideStatus = filtroStatus === 'todos' || emp.status === filtroStatus;
+    
+    // Aquí hacemos que "inactivo" englobe tanto "baja" como "baja definitiva" e "inactivo"
+    const coincideStatus = filtroStatus === 'todos' || 
+                           (filtroStatus === 'activo' && emp.status === 'activo') || 
+                           (filtroStatus === 'inactivo' && (emp.status === 'inactivo' || emp.status === 'baja' || emp.status === 'baja definitiva'));
+                           
     return coincideBusqueda && coincideStatus;
   });
 
@@ -177,7 +182,7 @@ const TablaGeneral = () => {
               <tr><td colSpan="10" style={{ textAlign: 'center', padding: '20px', color: '#666' }}>No se encontraron empleados en la base de datos.</td></tr>
             ) : (
               empleadosFiltrados.map((empleado) => (
-                <tr key={empleado.id} style={{ backgroundColor: empleado.status === 'inactivo' ? '#fff0f0' : 'white', borderBottom: '1px solid #ddd' }}>
+                <tr key={empleado.id} style={{ backgroundColor: empleado.status !== 'activo' ? '#fff0f0' : 'white', borderBottom: '1px solid #ddd' }}>
                   <td style={{ padding: '10px' }}>{empleado.id === 999999 ? 'NUEVO' : empleado.id}</td>
                   {editandoId === empleado.id ? (
                     <>
