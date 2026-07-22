@@ -7,7 +7,7 @@ import {
   ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line
 } from 'recharts';
 
-const API_BASE = 'http://localhost:5000';
+const API_BASE = 'https://sistema-de-gestion-production-9f5d.up.railway.app';
 
 const PALETTE = [
   '#0056b3', '#28a745', '#fd7e14', '#6f42c1',

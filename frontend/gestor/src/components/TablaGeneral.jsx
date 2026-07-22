@@ -13,7 +13,7 @@ const TablaGeneral = () => {
   // --- FUNCIÓN PARA DESCARGAR DATOS REALES DE MARIADB ---
   const cargarEmpleados = async () => {
     try {
-      const response = await fetch('http://localhost:5000/empleados');
+      const response = await fetch('https://sistema-de-gestion-production-9f5d.up.railway.app/empleados');
       
       if (!response.ok) {
         throw new Error(`Error en el servidor: ${response.status}`);
@@ -74,7 +74,7 @@ const TablaGeneral = () => {
     const esNuevo = id === 999999;
 
     try {
-      const response = await fetch('http://localhost:5000/empleados', {
+      const response = await fetch('https://sistema-de-gestion-production-9f5d.up.railway.app/empleados', {
         method: 'POST', 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -42,9 +42,8 @@ const ControlAsistencia = () => {
   const getRegistro = (nombre, fecha) => datosDiarios.find((item) => item.nombre === nombre && formatearFecha(item.fecha) === formatearFecha(fecha));
 
   useEffect(() => {
-    const base = 'http://localhost:5000';
+    const base = 'https://sistema-de-gestion-production-9f5d.up.railway.app';
     let url = `${base}/registros/hoy`;
-
     if (vistaActiva === 'dia') {
       url = `${base}/registros?fecha=${fechaSeleccionada}`;
     } else if (vistaActiva === 'semana') {

@@ -15,7 +15,7 @@ const GestionNomina = () => {
 
   const cargarNomina = async () => {
     try {
-      const url = `http://localhost:5000/nomina_real?mes=${mesSeleccionado}&quincena=${quincenaSeleccionada}`;
+      const url = `https://sistema-de-gestion-production-9f5d.up.railway.app/nomina_real?mes=${mesSeleccionado}&quincena=${quincenaSeleccionada}`;
       const response = await fetch(url);
       if (response.ok) {
         const data = await response.json();
@@ -54,7 +54,7 @@ const GestionNomina = () => {
 
   const guardarCambios = async (id) => {
     try {
-      const response = await fetch('http://localhost:5000/actualizar_salario', {
+      const response = await fetch('https://sistema-de-gestion-production-9f5d.up.railway.app/actualizar_salario', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
