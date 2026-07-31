@@ -7,12 +7,17 @@ import Login from './components/Login.jsx';
 import logoEmpresa from './assets/JUCA.png'; 
 import { HiExclamationTriangle } from "react-icons/hi2";
 import Graficas from './components/Graficas.jsx';
+import AsistenciaWeb from './components/AsistenciaWeb';
 
 function App() {
+  // 🟢 SI LA URL ES /checar, CARGAMOS DIRECTO LA PANTALLA MÓVIL (SIN LOGIN NI HEADER)
+  if (window.location.pathname === '/checar') {
+    return <AsistenciaWeb />;
+  }
+
   const location = useLocation();
   
   // --- EL CANDADO DEL SISTEMA ---
-  // Si está en false, vemos el Login. Si está en true, vemos el sistema.
   const [autenticado, setAutenticado] = useState(false);
 
   const estiloBoton = (ruta) => ({
@@ -31,7 +36,7 @@ function App() {
     return <Login onLoginExitoso={() => setAutenticado(true)} />;
   }
 
-  // Si ya pasó el Login, mostramos todo el sistema
+  // Si ya pasó el Login, mostramos todo el sistema normal
   return (
     <div style={{ padding: '0', fontFamily: 'sans-serif', backgroundColor: '#f4f7f6', minHeight: '100vh' }}>
       
@@ -56,7 +61,6 @@ function App() {
           <h1 style={{ margin: 0, fontSize: '16px', color: '#333', fontWeight: 'normal', backgroundColor: '#e9ecef', padding: '5px 10px', borderRadius: '4px' }}>
             SIGEP - Sistema Integral
           </h1>
-          {/* Botón para cerrar sesión */}
           <button 
             onClick={() => setAutenticado(false)}
             style={{ padding: '6px 12px', backgroundColor: '#dc3545', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' }}
