@@ -594,3 +594,79 @@ def get_dashboard_stats_empleado():
     except Exception as e:
         logger.error(f"Error al generar estadísticas de empleado: {e}")
         return jsonify({"error": str(e)}), 500
+
+    # ── REGISTRO DE ASISTENCIA WEB (CELULAR) ──────────────────────────────
+@main.route('/api/asistencia-web', methods=['POST'])
+def registrar_asistencia_web():
+    try:
+        # 1. Recibimos los datos de React
+        data = request.json
+        id_empleado = data.get('id_empleado')
+        accion = data.get('accion')
+        nip_recibido = data.get('nip')  
+        
+        if not id_empleado or not accion or not nip_recibido:
+            return jsonify({"error": "Faltan datos o NIP vacío."}), 400
+
+        # Conectamos a la base de datos
+        conn = get_db() 
+        cursor = conn.cursor()
+
+        # ========================================================
+        # INICIO DE VALIDACIÓN DE NIP (EL CADENERO)
+        # ========================================================
+        # Buscamos el teléfono real del empleado en la base de datos
+        cursor.execute("SELECT telefono FROM empleado WHERE id_empleado = %s", (id_empleado,))
+        resultado = cursor.fetchone()
+
+        if not resultado or not resultado[0]:
+            return jsonify({"error": "El empleado no tiene teléfono registrado."}), 400
+
+        # Sacamos los últimos 4 dígitos del teléfono guardado
+        telefono_db = str(resultado[0]).strip()
+        nip_correcto = telefono_db[-4:] 
+
+        # Comparamos: Si no son iguales, rebotamos la petición con código 401
+        if nip_recibido != nip_correcto:
+            return jsonify({"error": "NIP incorrecto. Usa los últimos 4 dígitos de tu celular."}), 401
+        # ========================================================
+        # FIN DE VALIDACIÓN (Si pasa aquí, el NIP era correcto)
+        # ========================================================
+
+        # Obtenemos la hora y fecha exacta del servidor
+        fecha_actual = datetime.now().strftime('%Y-%m-%d')
+        hora_actual = datetime.now().strftime('%H:%M:%S')
+
+        # Registramos la hora dependiendo del botón que presionó
+        if accion == 'entrada':
+            cursor.execute("SELECT id_resumen FROM resumen WHERE id_empleado = %s AND fecha = %s", (id_empleado, fecha_actual))
+            if cursor.fetchone():
+                return jsonify({"error": "Ya tienes una entrada registrada el día de hoy."}), 400
+            
+            cursor.execute("""
+                INSERT INTO resumen (id_empleado, fecha, hora_entrada, id_status_dia) 
+                VALUES (%s, %s, %s, 1)
+            """, (id_empleado, fecha_actual, hora_actual))
+
+        elif accion == 'salida':
+            cursor.execute("""
+                UPDATE resumen 
+                SET hora_salida = %s 
+                WHERE id_empleado = %s AND fecha = %s
+            """, (hora_actual, id_empleado, fecha_actual))
+
+        elif accion == 'salida_comida':
+            cursor.execute("UPDATE resumen SET hora_salida_comida = %s WHERE id_empleado = %s AND fecha = %s", (hora_actual, id_empleado, fecha_actual))
+            
+        elif accion == 'regreso_comida':
+            cursor.execute("UPDATE resumen SET hora_regreso_comida = %s WHERE id_empleado = %s AND fecha = %s", (hora_actual, id_empleado, fecha_actual))
+
+        conn.commit()
+        cursor.close()
+        conn.close()
+
+        return jsonify({"message": f"Registro de {accion} guardado con éxito"}), 200
+
+    except Exception as e:
+        logger.error(f"Error en registrar_asistencia_web: {e}")
+        return jsonify({"error": str(e)}), 500
