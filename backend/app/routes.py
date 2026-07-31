@@ -2,7 +2,7 @@ from flask import Blueprint, jsonify, request, current_app, Response
 import mysql.connector
 import html
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 import calendar
 from twilio.twiml.messaging_response import MessagingResponse
 
@@ -634,9 +634,10 @@ def registrar_asistencia_web():
         # ========================================================
 
         # Obtenemos la hora y fecha exacta del servidor
-        fecha_actual = datetime.now().strftime('%Y-%m-%d')
-        hora_actual = datetime.now().strftime('%H:%M:%S')
-
+        hora_mexico = datetime.utcnow() - timedelta(hours=6)
+        fecha_actual = hora_mexico.strftime('%Y-%m-%d')
+        hora_actual = hora_mexico.strftime('%H:%M:%S')
+        
         # Registramos la hora dependiendo del botón que presionó
         if accion == 'entrada':
             cursor.execute("SELECT id_resumen FROM resumen WHERE id_empleado = %s AND fecha = %s", (id_empleado, fecha_actual))
