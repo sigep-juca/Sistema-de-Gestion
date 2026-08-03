@@ -151,6 +151,7 @@ def get_nomina_real():
 
 # ── REGISTROS ──────────────────────────────────────────────
 
+# ── REGISTROS ──────────────────────────────────────────────
 @main.route('/registros', methods=['GET'])
 def get_registros():
     conn = get_db()
@@ -160,13 +161,16 @@ def get_registros():
     mes = request.args.get('mes')
     semana = request.args.get('semana')
     
+    # 👇 AQUÍ AGREGAMOS r.latitud y r.longitud 👇
     query = """
         SELECT e.nombre, r.fecha,
                TIME_FORMAT(r.hora_entrada, '%H:%i') AS entrada,
                TIME_FORMAT(r.hora_salida, '%H:%i') AS salida,
                CONCAT(FLOOR(r.horas_trabajadas), 'h ', 
                       ROUND((r.horas_trabajadas % 1) * 60), 'm') AS total,
-               sd.descripcion AS status
+               sd.descripcion AS status,
+               r.latitud, 
+               r.longitud
         FROM resumen r
         JOIN empleado e ON r.id_empleado = e.id_empleado
         LEFT JOIN status_dia sd ON r.id_status_dia = sd.id_status_dia
