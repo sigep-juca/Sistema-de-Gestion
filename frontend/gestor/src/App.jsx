@@ -11,7 +11,7 @@ import AsistenciaWeb from './components/AsistenciaWeb';
 import MonitoreoVivo from './components/MonitoreoVivo';
 
 function App() {
-  // 🟢 SI LA URL ES /checar, CARGAMOS DIRECTO LA PANTALLA MÓVIL (SIN LOGIN NI HEADER)
+  // SI LA URL ES /checar, CARGAMOS DIRECTO LA PANTALLA MÓVIL (SIN LOGIN NI HEADER)
   if (window.location.pathname === '/checar') {
     return <AsistenciaWeb />;
   }
@@ -78,7 +78,7 @@ function App() {
           <Link to="/asistencia" style={estiloBoton('/asistencia')}>3. Control de Asistencia y Horarios</Link>
           <Link to="/graficas" style={estiloBoton('/graficas')}>4. Gráficas</Link>
           
-          {/* 👇 AQUÍ AGREGUÉ EL NUEVO BOTÓN 👇 */}
+          {/*  AQUÍ AGREGUÉ EL NUEVO BOTÓN  */}
           <Link to="/monitoreo" style={estiloBoton('/monitoreo')}>5. Monitoreo en Vivo</Link>
         </nav>
 
@@ -89,7 +89,7 @@ function App() {
             <Route path="/asistencia" element={<ControlAsistencia />} />
             <Route path="/graficas" element={<Graficas />} />
             
-            {/* 👇 AQUÍ AGREGUÉ LA NUEVA RUTA PARA MOSTRAR TU ARCHIVO 👇 */}
+            {/* AQUÍ AGREGUÉ LA NUEVA RUTA PARA MOSTRAR TU ARCHIVO*/}
             <Route path="/monitoreo" element={<MonitoreoVivo />} />
           </Routes>
         </main>

@@ -15,7 +15,7 @@ const MonitoreoVivo = () => {
 
   return (
     <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '10px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
-      <h2 style={{ color: '#002855' }}>📍 Monitoreo en Vivo (GPS)</h2>
+      <h2 style={{ color: '#002855' }}>Monitoreo en Vivo (GPS)</h2>
       <p style={{ color: '#6c757d', marginBottom: '20px' }}>
         Ubicación exacta de los empleados al momento de marcar su entrada.
       </p>
@@ -52,11 +52,11 @@ const MonitoreoVivo = () => {
                       display: 'inline-block'
                     }}
                   >
-                    📍 Ver en Mapa
+                    Ver en Mapa
                   </a>
                 ) : (
                   <span style={{ color: '#6c757d', fontStyle: 'italic' }}>
-                    Sin ubicación 📵
+                    Sin ubicación 
                   </span>
                 )}
                 {/* FIN DEL BOTÓN */}
