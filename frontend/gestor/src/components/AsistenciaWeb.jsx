@@ -12,7 +12,6 @@ const AsistenciaWeb = () => {
 
   const cargarEmpleados = async () => {
     try {
-      // Usamos tu API_URL de Railway
       const response = await fetch(`${API_URL}/empleados`);
       
       if (!response.ok) {
@@ -41,80 +40,49 @@ const AsistenciaWeb = () => {
   }, []);
 
   const registrarAsistencia = (accion) => {
-    // 1. Validaciones básicas
-    if (!empleadoSeleccionado) {
-      setMensajeError('Por favor selecciona tu nombre.');
+    // 1. Validaciones básicas usando tus variables correctas
+    if (!idEmpleado) {
+      setMensaje({ tipo: 'error', texto: 'Por favor selecciona tu nombre.' });
       return;
     }
     if (!nip || nip.length !== 4) {
-      setMensajeError('Por favor ingresa tu NIP de 4 dígitos.');
+      setMensaje({ tipo: 'error', texto: 'Por favor ingresa tu NIP de 4 dígitos.' });
       return;
     }
 
     setCargando(true);
-    setMensajeError('');
-    setMensajeExito('');
+    setMensaje({ tipo: '', texto: '' });
 
-    // ========================================================
-    // 2. VALIDACIÓN Y LECTURA DEL GPS (NUEVO)
-    // ========================================================
+    // 2. VALIDACIÓN Y LECTURA DEL GPS
     if (!navigator.geolocation) {
-      setMensajeError('Tu dispositivo no soporta la ubicación.');
+      setMensaje({ tipo: 'error', texto: 'Tu dispositivo no soporta la ubicación.' });
       setCargando(false);
       return;
     }
 
-    // Pedimos las coordenadas exactas
+    // 3. PEDIR COORDENADAS (Alta precisión desactivada para que la PC no se trabe)
     navigator.geolocation.getCurrentPosition(
-      async (position) => {
+      (position) => {
         const latitud = position.coords.latitude;
         const longitud = position.coords.longitude;
-
-        // 3. ENVIAR TODO AL BACKEND CON LA UBICACIÓN INCLUIDA
-        try {
-          const response = await fetch(`${API_URL}/api/asistencia-web`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              id_empleado: empleadoSeleccionado,
-              accion: accion,
-              nip: nip,
-              latitud: latitud,     // <- Mandamos la latitud
-              longitud: longitud    // <- Mandamos la longitud
-            })
-          });
-
-          const data = await response.json();
-
-          if (response.ok) {
-            setMensajeExito(`¡Marcado con éxito: ${accion.toUpperCase()}!`);
-            setNip(''); // Limpiamos el NIP por seguridad
-          } else {
-            setMensajeError(data.error || 'Ocurrió un error al registrar.');
-          }
-        } catch (error) {
-          setMensajeError('Error de conexión con el servidor.');
-        } finally {
-          setCargando(false);
-        }
+        
+        // Llamamos a tu función original para enviar los datos limpios
+        enviarAlBackend(accion, latitud, longitud);
       },
       (error) => {
-        // 4. SI EL EMPLEADO DENIEGA EL PERMISO O FALLA EL GPS
         setCargando(false);
         if (error.code === error.PERMISSION_DENIED) {
-          setMensajeError('ACCESO DENEGADO: Debes permitir tu ubicación GPS para checar.');
+          setMensaje({ tipo: 'error', texto: '🔒 ACCESO DENEGADO: Debes permitir tu ubicación GPS para checar.' });
         } else {
-          setMensajeError('Error al obtener ubicación. Revisa tu señal GPS.');
+          setMensaje({ tipo: 'error', texto: '⚠️ Error al obtener ubicación. El dispositivo tardó mucho.' });
         }
       },
-      // Configuración para pedir la mayor precisión posible
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 } 
+      { enableHighAccuracy: false, timeout: 10000, maximumAge: 0 } 
     );
   };
 
   const enviarAlBackend = async (accion, lat, lng) => {
     try {
-      // Usamos tu API_URL de Railway para registrar la checada
       const response = await fetch(`${API_URL}/api/asistencia-web`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
