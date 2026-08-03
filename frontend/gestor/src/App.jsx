@@ -8,6 +8,7 @@ import logoEmpresa from './assets/JUCA.png';
 import { HiExclamationTriangle } from "react-icons/hi2";
 import Graficas from './components/Graficas.jsx';
 import AsistenciaWeb from './components/AsistenciaWeb';
+import MonitoreoVivo from './components/MonitoreoVivo';
 
 function App() {
   // 🟢 SI LA URL ES /checar, CARGAMOS DIRECTO LA PANTALLA MÓVIL (SIN LOGIN NI HEADER)
@@ -76,6 +77,9 @@ function App() {
           <Link to="/nomina" style={estiloBoton('/nomina')}>2. Nómina Quincenal</Link>
           <Link to="/asistencia" style={estiloBoton('/asistencia')}>3. Control de Asistencia y Horarios</Link>
           <Link to="/graficas" style={estiloBoton('/graficas')}>4. Gráficas</Link>
+          
+          {/* 👇 AQUÍ AGREGUÉ EL NUEVO BOTÓN 👇 */}
+          <Link to="/monitoreo" style={estiloBoton('/monitoreo')}>5. Monitoreo en Vivo</Link>
         </nav>
 
         <main style={{ border: '1px solid #ddd', padding: '25px', borderRadius: '8px', backgroundColor: 'white', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
@@ -84,6 +88,9 @@ function App() {
             <Route path="/nomina" element={<GestionNomina />} />
             <Route path="/asistencia" element={<ControlAsistencia />} />
             <Route path="/graficas" element={<Graficas />} />
+            
+            {/* 👇 AQUÍ AGREGUÉ LA NUEVA RUTA PARA MOSTRAR TU ARCHIVO 👇 */}
+            <Route path="/monitoreo" element={<MonitoreoVivo />} />
           </Routes>
         </main>
       </div>
