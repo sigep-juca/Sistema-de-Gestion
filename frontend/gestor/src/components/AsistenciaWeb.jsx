@@ -40,29 +40,76 @@ const AsistenciaWeb = () => {
     cargarEmpleados();
   }, []);
 
-  const registrarAsistencia = (tipoAccion) => {
-    if (!idEmpleado) {
-      setMensaje({ tipo: 'error', texto: 'Por favor selecciona tu nombre.' });
+  const registrarAsistencia = (accion) => {
+    // 1. Validaciones básicas
+    if (!empleadoSeleccionado) {
+      setMensajeError('Por favor selecciona tu nombre.');
+      return;
+    }
+    if (!nip || nip.length !== 4) {
+      setMensajeError('Por favor ingresa tu NIP de 4 dígitos.');
       return;
     }
 
     setCargando(true);
-    setMensaje({ tipo: '', texto: '' });
+    setMensajeError('');
+    setMensajeExito('');
 
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const { latitude, longitude } = position.coords;
-          enviarAlBackend(tipoAccion, latitude, longitude);
-        },
-        (error) => {
-          setMensaje({ tipo: 'error', texto: 'Debes activar el GPS para registrar tu asistencia.' });
+    // ========================================================
+    // 2. VALIDACIÓN Y LECTURA DEL GPS (NUEVO)
+    // ========================================================
+    if (!navigator.geolocation) {
+      setMensajeError('Tu dispositivo no soporta la ubicación.');
+      setCargando(false);
+      return;
+    }
+
+    // Pedimos las coordenadas exactas
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const latitud = position.coords.latitude;
+        const longitud = position.coords.longitude;
+
+        // 3. ENVIAR TODO AL BACKEND CON LA UBICACIÓN INCLUIDA
+        try {
+          const response = await fetch(`${API_URL}/api/asistencia-web`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              id_empleado: empleadoSeleccionado,
+              accion: accion,
+              nip: nip,
+              latitud: latitud,     // <- Mandamos la latitud
+              longitud: longitud    // <- Mandamos la longitud
+            })
+          });
+
+          const data = await response.json();
+
+          if (response.ok) {
+            setMensajeExito(`¡Marcado con éxito: ${accion.toUpperCase()}!`);
+            setNip(''); // Limpiamos el NIP por seguridad
+          } else {
+            setMensajeError(data.error || 'Ocurrió un error al registrar.');
+          }
+        } catch (error) {
+          setMensajeError('Error de conexión con el servidor.');
+        } finally {
           setCargando(false);
         }
-      );
-    } else {
-      enviarAlBackend(tipoAccion, null, null);
-    }
+      },
+      (error) => {
+        // 4. SI EL EMPLEADO DENIEGA EL PERMISO O FALLA EL GPS
+        setCargando(false);
+        if (error.code === error.PERMISSION_DENIED) {
+          setMensajeError('ACCESO DENEGADO: Debes permitir tu ubicación GPS para checar.');
+        } else {
+          setMensajeError('Error al obtener ubicación. Revisa tu señal GPS.');
+        }
+      },
+      // Configuración para pedir la mayor precisión posible
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 } 
+    );
   };
 
   const enviarAlBackend = async (accion, lat, lng) => {
