@@ -2,9 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { BiCalendarEvent, BiCalendar, BiCalendarWeek, BiGridAlt, BiChevronLeft, BiChevronRight } from "react-icons/bi";
 
 const ControlAsistencia = () => {
+  // Calculamos la fecha local exacta evitando el salto de día por UTC
+  const getLocalFecha = () => {
+    const offset = new Date().getTimezoneOffset() * 60000;
+    return new Date(Date.now() - offset).toISOString();
+  };
+  const fechaHoyLocal = getLocalFecha().split('T')[0];
+  const mesHoyLocal = getLocalFecha().slice(0, 7);
+
   const [vistaActiva, setVistaActiva] = useState('hoy');
-  const [fechaSeleccionada, setFechaSeleccionada] = useState(new Date().toISOString().split('T')[0]);
-  const [mesSeleccionado, setMesSeleccionado] = useState(new Date().toISOString().slice(0, 7));
+  const [fechaSeleccionada, setFechaSeleccionada] = useState(fechaHoyLocal);
+  const [mesSeleccionado, setMesSeleccionado] = useState(mesHoyLocal);
   const [numSemana, setNumSemana] = useState('1');
   const [mostrarCalendario, setMostrarCalendario] = useState(false);
   const [modoCalendario, setModoCalendario] = useState('dia');
@@ -150,7 +158,7 @@ const ControlAsistencia = () => {
     return (
       <div>
         <h3 style={{ marginTop: '20px', color: '#0056b3' }}>
-          Mostrando registro de: {vistaActiva === 'hoy' ? new Date().toISOString().split('T')[0] : fechaSeleccionada}
+          Mostrando registro de: {vistaActiva === 'hoy' ? fechaHoyLocal : fechaSeleccionada}
         </h3>
         <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '10px' }}>
           <thead>
@@ -173,7 +181,7 @@ const ControlAsistencia = () => {
               return (
                 <tr key={`${emp.nombre}-${index}`} style={{ borderBottom: '1px solid #ddd' }}>
                   <td style={{ padding: '12px', fontWeight: 'bold' }}>{emp.nombre || 'Desconocido'}</td>
-                  <td style={{ padding: '12px' }}>{formatearFecha(emp.fecha) || new Date().toISOString().split('T')[0]}</td>
+                  <td style={{ padding: '12px' }}>{formatearFecha(emp.fecha) || fechaHoyLocal}</td>
                   <td style={{ padding: '12px', color: emp.entrada === '-' ? '#dc3545' : 'black', fontWeight: emp.entrada === '-' ? 'bold' : 'normal' }}>{emp.entrada || '-'}</td>
                   <td style={{ padding: '12px', color: emp.salida === '-' ? '#dc3545' : 'black', fontWeight: emp.salida === '-' ? 'bold' : 'normal' }}>{emp.salida || '-'}</td>
                   <td style={{ padding: '12px' }}>{emp.total || '-'}</td>
@@ -316,7 +324,7 @@ const ControlAsistencia = () => {
       </div>
 
       <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap', backgroundColor: '#f8f9fa', padding: '15px', borderRadius: '8px', border: '1px solid #dee2e6' }}>
-        <button onClick={() => { setVistaActiva('hoy'); setFechaSeleccionada(new Date().toISOString().split('T')[0]); }} style={getBotonEstilo('hoy')}>
+        <button onClick={() => { setVistaActiva('hoy'); setFechaSeleccionada(fechaHoyLocal); }} style={getBotonEstilo('hoy')}>
           <BiCalendarEvent fontSize="18px" /> Hoy
         </button>
         <button onClick={() => abrirCalendario('dia')} style={getBotonEstilo('dia')}>
