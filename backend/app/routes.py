@@ -161,10 +161,12 @@ def get_registros():
     mes = request.args.get('mes')
     semana = request.args.get('semana')
     
-    # 👇 AQUÍ AGREGAMOS r.latitud y r.longitud 👇
+    # AQUÍ AGREGAMOS LAS HORAS DE COMIDA AL SELECT
     query = """
         SELECT e.nombre, r.fecha,
                TIME_FORMAT(r.hora_entrada, '%H:%i') AS entrada,
+               TIME_FORMAT(r.hora_salida_comida, '%H:%i') AS salida_comida,
+               TIME_FORMAT(r.hora_regreso_comida, '%H:%i') AS regreso_comida,
                TIME_FORMAT(r.hora_salida, '%H:%i') AS salida,
                CONCAT(FLOOR(r.horas_trabajadas), 'h ', 
                       ROUND((r.horas_trabajadas % 1) * 60), 'm') AS total,
