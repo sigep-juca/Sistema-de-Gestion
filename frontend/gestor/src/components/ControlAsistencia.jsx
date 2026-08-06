@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { BiCalendarEvent, BiCalendar, BiCalendarWeek, BiGridAlt, BiChevronLeft, BiChevronRight } from "react-icons/bi";
 
 const ControlAsistencia = () => {
-  // Calculamos la fecha local exacta evitando el salto de día por UTC
   const getLocalFecha = () => {
     const offset = new Date().getTimezoneOffset() * 60000;
     return new Date(Date.now() - offset).toISOString();
@@ -51,7 +50,8 @@ const ControlAsistencia = () => {
 
   useEffect(() => {
     const base = 'https://sistema-de-gestion-production-9f5d.up.railway.app';
-    let url = `${base}/registros/hoy`;
+    let url = `${base}/registros?fecha=${fechaHoyLocal}`;
+    
     if (vistaActiva === 'dia') {
       url = `${base}/registros?fecha=${fechaSeleccionada}`;
     } else if (vistaActiva === 'semana') {
@@ -72,7 +72,7 @@ const ControlAsistencia = () => {
         setDatosDiarios([]);
         setCargando(false);
       });
-  }, [fechaSeleccionada, mesSeleccionado, numSemana, vistaActiva]);
+  }, [fechaSeleccionada, mesSeleccionado, numSemana, vistaActiva, fechaHoyLocal]);
 
   const getColorStatus = (status) => {
     switch(status) {
