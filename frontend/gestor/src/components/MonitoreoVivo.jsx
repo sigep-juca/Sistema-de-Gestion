@@ -34,13 +34,13 @@ const MonitoreoVivo = () => {
 
   return (
     <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '10px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
-      <h2 style={{ color: '#002855', marginBottom: '5px' }}>📍 Monitoreo en Vivo (GPS)</h2>
+      <h2 style={{ color: '#002855', marginBottom: '5px' }}>Monitoreo en Vivo (GPS)</h2>
       <p style={{ color: '#6c757d', marginBottom: '25px', fontSize: '14px' }}>
         Línea de tiempo y ubicación satelital del personal de JUCA TECNO.
       </p>
 
       {/* ========================================== */}
-      {/* BARRA DE HERRAMIENTAS (Filtros)          */}
+      {/* BARRA DE HERRAMIENTAS (Filtros)              */}
       {/* ========================================== */}
       <div style={{ display: 'flex', gap: '15px', marginBottom: '20px', flexWrap: 'wrap' }}>
         <div style={{ flex: '1', minWidth: '250px' }}>
@@ -66,7 +66,7 @@ const MonitoreoVivo = () => {
       </div>
 
       {/* ========================================== */}
-      {/* TABLA CON LA LÍNEA DE TIEMPO HORIZONTAL */}
+      {/* TABLA CON LA LÍNEA DE TIEMPO HORIZONTAL    */}
       {/* ========================================== */}
       <div style={{ overflowX: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '800px' }}>
