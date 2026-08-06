@@ -40,7 +40,7 @@ const MonitoreoVivo = () => {
       </p>
 
       {/* ========================================== */}
-      {/* 🛠️ BARRA DE HERRAMIENTAS (Filtros)          */}
+      {/* BARRA DE HERRAMIENTAS (Filtros)          */}
       {/* ========================================== */}
       <div style={{ display: 'flex', gap: '15px', marginBottom: '20px', flexWrap: 'wrap' }}>
         <div style={{ flex: '1', minWidth: '250px' }}>
@@ -66,7 +66,7 @@ const MonitoreoVivo = () => {
       </div>
 
       {/* ========================================== */}
-      {/* 📊 TABLA CON LA LÍNEA DE TIEMPO HORIZONTAL */}
+      {/* TABLA CON LA LÍNEA DE TIEMPO HORIZONTAL */}
       {/* ========================================== */}
       <div style={{ overflowX: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '800px' }}>
@@ -106,7 +106,7 @@ const MonitoreoVivo = () => {
                           display: 'inline-block'
                         }}
                       >
-                        📍 Ver Mapa
+                        Ver Mapa
                       </a>
                     ) : (
                       <span style={{ color: '#6c757d', fontStyle: 'italic', fontSize: '13px' }}>
