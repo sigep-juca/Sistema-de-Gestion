@@ -633,7 +633,7 @@ def registrar_asistencia_web():
         nip_correcto = telefono_db[-4:] 
 
         if nip_recibido != nip_correcto:
-            return jsonify({"error": "NIP incorrecto. Usa los últimos 4 dígitos de tu celular."}), 401
+            return jsonify({"error": "NIP incorrecto."}), 401
 
         # Hora con corrección UTC-6
         hora_mexico = datetime.utcnow() - timedelta(hours=6)
