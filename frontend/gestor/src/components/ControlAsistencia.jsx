@@ -128,24 +128,40 @@ const ControlAsistencia = () => {
     setMostrarCalendario(false);
   };
 
-  // NUEVA FUNCIÓN: Calcula las horas en el frontend si el backend no las envía
+  // FUNCIÓN ACTUALIZADA: Muestra formato "Xh Ym" para mayor claridad visual
   const calcularHorasRestantes = (entrada, salida, totalBackend) => {
-    // Si el backend sí envió el dato, lo usamos
-    if (totalBackend && totalBackend !== '-' && totalBackend !== '0') {
-      return totalBackend;
-    }
-    // Si tenemos hora de entrada y de salida, las calculamos (ej. "14:16" a "16:40")
+    // Si tenemos hora de entrada y de salida, calculamos las horas y minutos exactos
     if (entrada && salida && entrada !== '-' && salida !== '-') {
       try {
         const [hE, mE] = entrada.split(':').map(Number);
         const [hS, mS] = salida.split(':').map(Number);
-        let diff = (hS + mS / 60) - (hE + mE / 60);
-        if (diff < 0) diff += 24; // Por si cruzan la medianoche
-        return diff.toFixed(2);
+        
+        // Calculamos todo en minutos para no perder precisión
+        let diffMinutos = (hS * 60 + mS) - (hE * 60 + mE);
+        if (diffMinutos < 0) diffMinutos += (24 * 60); // Por si cruzan la medianoche
+        
+        const horas = Math.floor(diffMinutos / 60);
+        const minutos = diffMinutos % 60;
+        
+        return `${horas}h ${minutos}m`;
       } catch (e) {
         return '-';
       }
     }
+    
+    // Si la función anterior no aplica pero el backend manda un decimal (ej. 2.40), 
+    // lo convertimos a formato de reloj
+    if (totalBackend && totalBackend !== '-' && !isNaN(totalBackend)) {
+        const horas = Math.floor(totalBackend);
+        const minutos = Math.round((totalBackend - horas) * 60);
+        return `${horas}h ${minutos}m`;
+    }
+
+    // Si el backend mandó un texto que no es número, lo respeta
+    if (totalBackend && totalBackend !== '-' && isNaN(totalBackend)) {
+      return totalBackend;
+    }
+
     return '-';
   };
 
@@ -199,7 +215,6 @@ const ControlAsistencia = () => {
               </tr>
             ) : registros.map((emp, index) => {
               const colores = getColorStatus(emp.status || '');
-              // Llamamos a la función para calcular las horas
               const horasCalculadas = calcularHorasRestantes(emp.entrada, emp.salida, emp.horas_trabajadas || emp.total);
               
               return (
