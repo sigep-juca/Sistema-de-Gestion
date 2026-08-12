@@ -46,7 +46,7 @@ const AsistenciaWeb = () => {
       return;
     }
     if (!nip || nip.length !== 4) {
-      setMensaje({ tipo: 'error', texto: 'Por favor ingresa tu NIP de 4 dígitos.' });
+      setMensaje({ tipo: 'error', texto: 'Por favor ingresa tu NIP.' });
       return;
     }
 
@@ -72,9 +72,9 @@ const AsistenciaWeb = () => {
       (error) => {
         setCargando(false);
         if (error.code === error.PERMISSION_DENIED) {
-          setMensaje({ tipo: 'error', texto: '🔒 ACCESO DENEGADO: Debes permitir tu ubicación GPS para checar.' });
+          setMensaje({ tipo: 'error', texto: 'ACCESO DENEGADO: Debes permitir tu ubicación GPS para checar.' });
         } else {
-          setMensaje({ tipo: 'error', texto: '⚠️ Error al obtener ubicación. El dispositivo tardó mucho.' });
+          setMensaje({ tipo: 'error', texto: 'Error al obtener ubicación. El dispositivo tardó mucho.' });
         }
       },
       { enableHighAccuracy: false, timeout: 10000, maximumAge: 0 } 
