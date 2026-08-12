@@ -184,7 +184,7 @@ const ControlAsistencia = () => {
                   <td style={{ padding: '12px' }}>{formatearFecha(emp.fecha) || fechaHoyLocal}</td>
                   <td style={{ padding: '12px', color: emp.entrada === '-' ? '#dc3545' : 'black', fontWeight: emp.entrada === '-' ? 'bold' : 'normal' }}>{emp.entrada || '-'}</td>
                   <td style={{ padding: '12px', color: emp.salida === '-' ? '#dc3545' : 'black', fontWeight: emp.salida === '-' ? 'bold' : 'normal' }}>{emp.salida || '-'}</td>
-                  <td style={{ padding: '12px' }}>{emp.total || '-'}</td>
+                  <td style={{ padding: '12px' }}>{emp.horas_trabajadas || emp.total || '-'}</td>
                   <td style={{ padding: '12px' }}>
                     <span style={{ backgroundColor: colores.bg, color: colores.text, padding: '5px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: 'bold', textTransform: 'uppercase' }}>
                       {emp.status || '-'}
@@ -260,7 +260,7 @@ const ControlAsistencia = () => {
                     <React.Fragment key={i}>
                       <td style={{ padding: '8px', border: '1px solid #ddd', textAlign: 'center', backgroundColor: colores.bg }}>{registro.entrada || '-'}</td>
                       <td style={{ padding: '8px', border: '1px solid #ddd', textAlign: 'center', backgroundColor: colores.bg }}>{registro.salida || '-'}</td>
-                      <td style={{ padding: '8px', border: '1px solid #ddd', textAlign: 'center', backgroundColor: colores.bg }}>{registro.total || '-'}</td>
+                      <td style={{ padding: '8px', border: '1px solid #ddd', textAlign: 'center', backgroundColor: colores.bg }}>{registro.horas_trabajadas || registro.total || '-'}</td>
                     </React.Fragment>
                   );
                 })}
@@ -301,10 +301,10 @@ const ControlAsistencia = () => {
                   }
                   const colores = getColorStatus(registro.status || '');
                   return (
-                    <td key={dia} style={{ border: '1px solid #ccc', backgroundColor: colores.bg, color: colores.text, padding: '6px', textAlign: 'center' }} title={`Entrada: ${registro.entrada || '-'}\nSalida: ${registro.salida || '-'}\nTotal: ${registro.total || '-'}`}>
+                    <td key={dia} style={{ border: '1px solid #ccc', backgroundColor: colores.bg, color: colores.text, padding: '6px', textAlign: 'center' }} title={`Entrada: ${registro.entrada || '-'}\nSalida: ${registro.salida || '-'}\nTotal: ${registro.horas_trabajadas || registro.total || '-'}`}>
                       <div style={{ fontSize: '10px' }}>{registro.entrada || '-'}</div>
                       <div style={{ fontSize: '10px' }}>{registro.salida || '-'}</div>
-                      <div style={{ fontSize: '10px', fontWeight: 'bold' }}>{registro.total || '-'}</div>
+                      <div style={{ fontSize: '10px', fontWeight: 'bold' }}>{registro.horas_trabajadas || registro.total || '-'}</div>
                     </td>
                   );
                 })}
