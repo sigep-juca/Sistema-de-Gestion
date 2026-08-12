@@ -6,11 +6,34 @@ import { FaFileExcel, FaFilePdf } from "react-icons/fa";
 import { BiEdit } from "react-icons/bi";
 
 const GestionNomina = () => {
+  // Función para generar los últimos 6 meses dinámicamente
+  const generarMeses = () => {
+    const meses = [];
+    const fechaActual = new Date();
+    const nombresMeses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+
+    for (let i = 0; i < 6; i++) {
+      const mes = fechaActual.getMonth();
+      const anio = fechaActual.getFullYear();
+      
+      const mesTexto = `${nombresMeses[mes]} ${anio}`;
+      const mesValor = `${anio}-${String(mes + 1).padStart(2, '0')}`; // Formato YYYY-MM para el backend
+
+      meses.push({ texto: mesTexto, valor: mesValor });
+      
+      fechaActual.setMonth(fechaActual.getMonth() - 1);
+    }
+    return meses;
+  };
+
+  const mesesDisponibles = generarMeses();
+
   const [empleados, setEmpleados] = useState([]);
   const [editandoId, setEditandoId] = useState(null);
   const [datosEditados, setDatosEditados] = useState({});
 
-  const [mesSeleccionado, setMesSeleccionado] = useState('2026-06');
+  // Ahora inicia siempre en el mes actual
+  const [mesSeleccionado, setMesSeleccionado] = useState(mesesDisponibles[0].valor);
   const [quincenaSeleccionada, setQuincenaSeleccionada] = useState('1');
 
   const cargarNomina = async () => {
@@ -163,9 +186,11 @@ const GestionNomina = () => {
               onChange={(e) => setMesSeleccionado(e.target.value)}
               style={{ padding: '6px', border: 'none', outline: 'none', cursor: 'pointer', fontSize: '13px' }}
             >
-              <option value="2026-06">Junio 2026</option>
-              <option value="2026-05">Mayo 2026</option>
-              <option value="2026-04">Abril 2026</option>
+              {mesesDisponibles.map((mes, index) => (
+                <option key={index} value={mes.valor}>
+                  {mes.texto}
+                </option>
+              ))}
             </select>
           </div>
 
