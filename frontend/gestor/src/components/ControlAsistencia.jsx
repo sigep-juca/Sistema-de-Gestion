@@ -128,6 +128,27 @@ const ControlAsistencia = () => {
     setMostrarCalendario(false);
   };
 
+  // NUEVA FUNCIÓN: Calcula las horas en el frontend si el backend no las envía
+  const calcularHorasRestantes = (entrada, salida, totalBackend) => {
+    // Si el backend sí envió el dato, lo usamos
+    if (totalBackend && totalBackend !== '-' && totalBackend !== '0') {
+      return totalBackend;
+    }
+    // Si tenemos hora de entrada y de salida, las calculamos (ej. "14:16" a "16:40")
+    if (entrada && salida && entrada !== '-' && salida !== '-') {
+      try {
+        const [hE, mE] = entrada.split(':').map(Number);
+        const [hS, mS] = salida.split(':').map(Number);
+        let diff = (hS + mS / 60) - (hE + mE / 60);
+        if (diff < 0) diff += 24; // Por si cruzan la medianoche
+        return diff.toFixed(2);
+      } catch (e) {
+        return '-';
+      }
+    }
+    return '-';
+  };
+
   const renderCuadriculaCalendario = () => {
     const primerDiaSemana = new Date(calYear, calMonth - 1, 1).getDay();
     const diasTotalMes = new Date(calYear, calMonth, 0).getDate();
@@ -178,13 +199,16 @@ const ControlAsistencia = () => {
               </tr>
             ) : registros.map((emp, index) => {
               const colores = getColorStatus(emp.status || '');
+              // Llamamos a la función para calcular las horas
+              const horasCalculadas = calcularHorasRestantes(emp.entrada, emp.salida, emp.horas_trabajadas || emp.total);
+              
               return (
                 <tr key={`${emp.nombre}-${index}`} style={{ borderBottom: '1px solid #ddd' }}>
                   <td style={{ padding: '12px', fontWeight: 'bold' }}>{emp.nombre || 'Desconocido'}</td>
                   <td style={{ padding: '12px' }}>{formatearFecha(emp.fecha) || fechaHoyLocal}</td>
                   <td style={{ padding: '12px', color: emp.entrada === '-' ? '#dc3545' : 'black', fontWeight: emp.entrada === '-' ? 'bold' : 'normal' }}>{emp.entrada || '-'}</td>
                   <td style={{ padding: '12px', color: emp.salida === '-' ? '#dc3545' : 'black', fontWeight: emp.salida === '-' ? 'bold' : 'normal' }}>{emp.salida || '-'}</td>
-                  <td style={{ padding: '12px' }}>{emp.horas_trabajadas || emp.total || '-'}</td>
+                  <td style={{ padding: '12px' }}>{horasCalculadas}</td>
                   <td style={{ padding: '12px' }}>
                     <span style={{ backgroundColor: colores.bg, color: colores.text, padding: '5px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: 'bold', textTransform: 'uppercase' }}>
                       {emp.status || '-'}
@@ -256,11 +280,13 @@ const ControlAsistencia = () => {
                     );
                   }
                   const colores = getColorStatus(registro.status || '');
+                  const horasCalculadas = calcularHorasRestantes(registro.entrada, registro.salida, registro.horas_trabajadas || registro.total);
+
                   return (
                     <React.Fragment key={i}>
                       <td style={{ padding: '8px', border: '1px solid #ddd', textAlign: 'center', backgroundColor: colores.bg }}>{registro.entrada || '-'}</td>
                       <td style={{ padding: '8px', border: '1px solid #ddd', textAlign: 'center', backgroundColor: colores.bg }}>{registro.salida || '-'}</td>
-                      <td style={{ padding: '8px', border: '1px solid #ddd', textAlign: 'center', backgroundColor: colores.bg }}>{registro.horas_trabajadas || registro.total || '-'}</td>
+                      <td style={{ padding: '8px', border: '1px solid #ddd', textAlign: 'center', backgroundColor: colores.bg }}>{horasCalculadas}</td>
                     </React.Fragment>
                   );
                 })}
@@ -300,11 +326,13 @@ const ControlAsistencia = () => {
                     return <td key={dia} style={{ border: '1px solid #ddd', backgroundColor: '#fff' }} title={`Día ${dia}`}>&nbsp;</td>;
                   }
                   const colores = getColorStatus(registro.status || '');
+                  const horasCalculadas = calcularHorasRestantes(registro.entrada, registro.salida, registro.horas_trabajadas || registro.total);
+
                   return (
-                    <td key={dia} style={{ border: '1px solid #ccc', backgroundColor: colores.bg, color: colores.text, padding: '6px', textAlign: 'center' }} title={`Entrada: ${registro.entrada || '-'}\nSalida: ${registro.salida || '-'}\nTotal: ${registro.horas_trabajadas || registro.total || '-'}`}>
+                    <td key={dia} style={{ border: '1px solid #ccc', backgroundColor: colores.bg, color: colores.text, padding: '6px', textAlign: 'center' }} title={`Entrada: ${registro.entrada || '-'}\nSalida: ${registro.salida || '-'}\nTotal: ${horasCalculadas}`}>
                       <div style={{ fontSize: '10px' }}>{registro.entrada || '-'}</div>
                       <div style={{ fontSize: '10px' }}>{registro.salida || '-'}</div>
-                      <div style={{ fontSize: '10px', fontWeight: 'bold' }}>{registro.horas_trabajadas || registro.total || '-'}</div>
+                      <div style={{ fontSize: '10px', fontWeight: 'bold' }}>{horasCalculadas}</div>
                     </td>
                   );
                 })}
